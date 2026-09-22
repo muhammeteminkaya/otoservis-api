@@ -192,7 +192,7 @@ def muhasebe_guncelle(is_emri_id: int, veri: MuhasebeGuncelle, db: Session = Dep
     return {"mesaj": "Muhasebe güncellendi"}
 @app.delete("/muhasebe/is-emri-sil/{id}")
 def is_emri_sil(id: int, db: Session = Depends(get_db)):
-    kayit = db.query(IsEmri).filter(IsEmri.id == id).first()
+    kayit = db.query(IsEmriDB).filter(IsEmriDB.id == id).first()
     if kayit:
         db.delete(kayit)
         db.commit()
