@@ -190,3 +190,11 @@ def muhasebe_guncelle(is_emri_id: int, veri: MuhasebeGuncelle, db: Session = Dep
     is_emri.toplam_tutar = veri.toplam_tutar
     db.commit()
     return {"mesaj": "Muhasebe güncellendi"}
+@app.delete("/muhasebe/is-emri-sil/{id}")
+def is_emri_sil(id: int, db: Session = Depends(get_db)):
+    kayit = db.query(IsEmri).filter(IsEmri.id == id).first()
+    if kayit:
+        db.delete(kayit)
+        db.commit()
+        return {"mesaj": "Kayıt başarıyla silindi"}
+    raise HTTPException(status_code=404, detail="Kayıt bulunamadı")
