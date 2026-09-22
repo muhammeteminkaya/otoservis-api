@@ -32,6 +32,7 @@ class IsEmriDB(Base):
     plaka = Column(String, index=True)
     marka_model = Column(String)
     yil = Column(Integer)
+    telefon = Column(String, index=True, nullable=True)
     usta_notu = Column(String, nullable=True)
     durum = Column(String, default="İşlemde")
     toplam_tutar = Column(Float, default=0.0) # Muhasebe için eklendi
@@ -79,6 +80,7 @@ class IsEmriEkle(BaseModel):
     plaka: str
     marka_model: str
     yil: int
+    telefon: str = None
     usta_notu: Optional[str] = None
     alinacak_parcalar: List[CirakGorevEkle] = []
 
