@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 # --- 1. VERİ TABANI AYARLARI ---
-SQLALCHEMY_DATABASE_URL = "sqlite:///./otoservis_v4.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./otoservis_v5.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -147,7 +147,14 @@ def arac_durumu_sorgula(plaka: str, db: Session = Depends(get_db)):
 # Usta ve Çırak İşlemleri (Öncekiyle Aynı)
 @app.post("/usta/is-emri-olustur")
 def usta_is_emri_olustur(veri: IsEmriEkle, db: Session = Depends(get_db)):
-    yeni_is_emri = IsEmriDB(plaka=veri.plaka, marka_model=veri.marka_model, yil=veri.yil, usta_notu=veri.usta_notu)
+    #TELEFON EŞLEŞTİRMESİ BURAYA EKLENDİ
+    yeni_is_emri = IsEmriDB(
+        plaka=veri.plaka,
+        marka_model=veri.marka_model,
+        yil=veri.yil,
+        telefon=veri.telefon,
+        usta_notu=veri.usta_notu
+    )
     db.add(yeni_is_emri)
     db.commit()
     db.refresh(yeni_is_emri)
