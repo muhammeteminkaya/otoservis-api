@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 # --- 1. VERİ TABANI AYARLARI ---
-SQLALCHEMY_DATABASE_URL = "sqlite:///./otoservis_v3.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./otoservis_v4.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
