@@ -223,3 +223,26 @@ def is_emri_arsivle(id: int, db: Session = Depends(get_db)):
         db.commit()
         return {"mesaj": "Kayıt arşive kaldırıldı"}
     raise HTTPException(status_code=404, detail="Kayıt bulunamadı")
+
+@app.get("/patron/istatistik")
+def patron_istatistik(db: Session = Depends(get_db)):
+    # Tamamlanmış ve arşivlenmiş tüm kayıtları bul
+    tamamlananlar = db.query(IsEmriDB).filter(
+        IsEmriDB.durum.in_(["Tamamlandı - Teslime Hazır", "Arşivlendi"])
+    ).all()
+    
+    # Kasaya giren toplam parayı hesapla
+    toplam_ciro = sum(islem.toplam_tutar for islem in tamamlananlar if islem.toplam_tutar)
+    
+    # Depodaki grafik çizimi için parça adlarını ve sayılarını ayır
+    stoklar = db.query(StokDB).all()
+    stok_adlari = [stok.parca_adi for stok in stoklar]
+    stok_miktarlari = [stok.miktar for stok in stoklar]
+    
+    return {
+        "toplam_ciro": toplam_ciro,
+        "arac_sayisi": len(tamamlananlar),
+        "stok_adlari": stok_adlari,
+        "stok_miktarlari": stok_miktarlari
+    }
+
