@@ -163,6 +163,16 @@ def usta_is_emri_olustur(veri: IsEmriEkle, db: Session = Depends(get_db)):
     db.commit()
     return {"mesaj": "Oluşturuldu."}
 
+@app.get("/usta/arac-gecmisi/{plaka}")
+def arac_gecmisi_getir(plaka: str, db: Session = Depends(get_db)):
+    # Sadece daha önce tamamlanmış servis kayıtlarını tarihe göre sondan başa sıralayıp getir
+    gecmis = db.query(IsEmriDB).filter(
+        IsEmriDB.plaka == plaka,
+        IsEmriDB.durum == "Tamamlandı - Teslime Hazır"
+    ).order_by(IsEmriDB.id.desc()).limit(5).all()
+    
+    return gecmis
+
 @app.get("/cirak/gorevler")
 def cirak_gorev_listesi(db: Session = Depends(get_db)):
     return db.query(CirakGorevDB).filter(CirakGorevDB.durum == "Bekliyor").all()
