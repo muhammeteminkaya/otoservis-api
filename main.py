@@ -165,12 +165,11 @@ def usta_is_emri_olustur(veri: IsEmriEkle, db: Session = Depends(get_db)):
 
 @app.get("/usta/arac-gecmisi/{plaka}")
 def arac_gecmisi_getir(plaka: str, db: Session = Depends(get_db)):
-    # Sadece daha önce tamamlanmış servis kayıtlarını tarihe göre sondan başa sıralayıp getir
+    # Hem teslime hazır olanları hem de arşive kalkanları listele
     gecmis = db.query(IsEmriDB).filter(
         IsEmriDB.plaka == plaka,
-        IsEmriDB.durum == "Tamamlandı - Teslime Hazır"
+        IsEmriDB.durum.in_(["Tamamlandı - Teslime Hazır", "Arşivlendi"])
     ).order_by(IsEmriDB.id.desc()).limit(5).all()
-    
     return gecmis
 
 @app.get("/cirak/gorevler")
@@ -198,7 +197,7 @@ def stok_guncelle(stok_id: int, veri: StokGuncelle, db: Session = Depends(get_db
 # YENİ EKLENEN: MUHASEBE İŞLEMLERİ
 @app.get("/muhasebe/is-emirleri")
 def muhasebe_is_emirleri(db: Session = Depends(get_db)):
-    return db.query(IsEmriDB).order_by(IsEmriDB.id.desc()).all()
+    return db.query(IsEmriDB).filter(IsEmriDB.durum != "Arşivlendi").order_by(IsEmriDB.id.desc()).all()
 
 @app.put("/muhasebe/is-emri-guncelle/{is_emri_id}")
 def muhasebe_guncelle(is_emri_id: int, veri: MuhasebeGuncelle, db: Session = Depends(get_db)):
@@ -214,4 +213,13 @@ def is_emri_sil(id: int, db: Session = Depends(get_db)):
         db.delete(kayit)
         db.commit()
         return {"mesaj": "Kayıt başarıyla silindi"}
+    raise HTTPException(status_code=404, detail="Kayıt bulunamadı")
+
+@app.put("/muhasebe/is-emri-arsivle/{id}")
+def is_emri_arsivle(id: int, db: Session = Depends(get_db)):
+    kayit = db.query(IsEmriDB).filter(IsEmriDB.id == id).first()
+    if kayit:
+        kayit.durum = "Arşivlendi"
+        db.commit()
+        return {"mesaj": "Kayıt arşive kaldırıldı"}
     raise HTTPException(status_code=404, detail="Kayıt bulunamadı")
