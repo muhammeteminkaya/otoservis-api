@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Depo Paneli - Stok Yönetimi</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f8fafc; padding: 20px; color: #1e293b; }
+        
+        /* Üst Menü - Depo için Mor Tema */
+        .header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: #6366f1; color: white; padding: 15px 20px; border-radius: 8px; 
+            margin-bottom: 20px; max-width: 700px; margin: 0 auto 20px auto; 
+        }
+        .logout-btn { background: #4338ca; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        
+        .container { max-width: 700px; margin: 0 auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { margin-bottom: 20px; color: #6366f1; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        
+        /* Stok Tablosu */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: #f1f5f9; color: #475569; font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
+        tr:hover { background-color: #f8fafc; }
+        
+        .parca-adi { font-weight: bold; color: #1e293b; font-size: 1.1rem; }
+        
+        /* Miktar Güncelleme Alanı */
+        .guncelle-kutusu { display: flex; align-items: center; gap: 10px; }
+        .miktar-input { 
+            width: 80px; padding: 8px; border: 2px solid #cbd5e1; border-radius: 6px; 
+            font-size: 1rem; font-weight: bold; text-align: center; outline: none;
+        }
+        .miktar-input:focus { border-color: #6366f1; }
+        
+        .btn-kaydet { 
+            background: #6366f1; color: white; border: none; padding: 8px 15px; 
+            border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;
+        }
+        .btn-kaydet:hover { background: #4f46e5; }
+
+        .kritik-stok { color: #ef4444; font-weight: bold; font-size: 0.85rem; display: block; margin-top: 4px; }
+        
+        #mesajKutusu { display: none; padding: 12px; border-radius: 6px; margin-top: 15px; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>👤 İyi Çalışmalar, <span id="kullaniciAdiDisplay">Depo Sorumlusu</span></div>
+        <button class="logout-btn" onclick="cikisYap()">Çıkış Yap</button>
+    </div>
+
+    <div class="container">
+        <h2>📦 Mevcut Depo Stokları</h2>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Parça Adı</th>
+                    <th>Mevcut Miktar</th>
+                    <th>Stok Güncelle</th>
+                </tr>
+            </thead>
+            <tbody id="stokListesi">
+                <!-- Stoklar buraya JS ile yüklenecek -->
+            </tbody>
+        </table>
+
+        <div id="mesajKutusu"></div>
+    </div>
+
+    <script>
+        // 1. GÜVENLİK KONTROLÜ
+        if (localStorage.getItem('kullaniciRolu') !== 'depo') {
+            alert("Bu sayfaya erişim yetkiniz yok! Depo yetkilisi olarak giriş yapmalısınız.");
+            window.location.href = 'login.html';
+        }
+        
+        document.getElementById('kullaniciAdiDisplay').innerText = localStorage.getItem('aktifKullanici').toUpperCase();
+
+        function cikisYap() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        // 2. STOKLARI BACKEND'DEN ÇEKME
+        async function stoklariGetir() {
+            const liste = document.getElementById('stokListesi');
+            liste.innerHTML = "<tr><td colspan='3'>Yükleniyor...</td></tr>";
+
+            try {
+                const res = await fetch('https://otoservis-api-4ta4.onrender.com/depo/stoklar');
+                if (!res.ok) throw new Error("Veri çekilemedi");
+                
+                const stoklar = await res.json();
+                liste.innerHTML = ""; 
+
+                stoklar.forEach(stok => {
+                    // Miktar 10'un altındaysa kritik stok uyarısı ver
+                    const kritikUyari = stok.miktar < 10 ? `<span class="kritik-stok">⚠️ Kritik Seviye!</span>` : "";
+                    
+                    liste.innerHTML += `
+                        <tr>
+                            <td>
+                                <div class="parca-adi">${stok.parca_adi}</div>
+                                ${kritikUyari}
+                            </td>
+                            <td style="font-size: 1.2rem; font-weight: bold; color: #475569;">${stok.miktar}</td>
+                            <td>
+                                <div class="guncelle-kutusu">
+                                    <input type="number" id="stokInput_${stok.id}" class="miktar-input" value="${stok.miktar}" min="0">
+                                    <button class="btn-kaydet" onclick="stokGuncelle(${stok.id})">Güncelle</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+            } catch (err) {
+                liste.innerHTML = "<tr><td colspan='3' style='color:#ef4444;'>Hata: Sunucuya bağlanılamadı.</td></tr>";
+            }
+        }
+
+        // 3. STOK MİKTARINI GÜNCELLEME
+        async function stokGuncelle(stokId) {
+            const yeniMiktar = document.getElementById(`stokInput_${stokId}`).value;
+            const mesaj = document.getElementById('mesajKutusu');
+
+            try {
+                const res = await fetch(`https://otoservis-api-4ta4.onrender.com/depo/stok-guncelle/${stokId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ miktar: parseInt(yeniMiktar) })
+                });
+
+                if (!res.ok) throw new Error("Güncellenemedi");
+
+                mesaj.style.display = 'block';
+                mesaj.style.background = '#dcfce7';
+                mesaj.style.color = '#15803d';
+                mesaj.innerText = "✓ Stok başarıyla güncellendi!";
+                
+                stoklariGetir(); // Tabloyu yenile
+
+                setTimeout(() => { mesaj.style.display = 'none'; }, 3000);
+
+            } catch (err) {
+                mesaj.style.display = 'block';
+                mesaj.style.background = '#fee2e2';
+                mesaj.style.color = '#b91c1c';
+                mesaj.innerText = "Hata: Stok güncellenemedi.";
+                setTimeout(() => { mesaj.style.display = 'none'; }, 3000);
+            }
+        }
+
+        // Sayfa açıldığında stokları yükle
+        window.onload = stoklariGetir;
+    </script>
+</body>
+</html>

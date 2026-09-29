@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Patron Yönetim Paneli</title>
+    <!-- Dünyaca ünlü Chart.js grafik kütüphanesi -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f1f5f9; padding: 30px; color: #1e293b; }
+        .header { background: #0f172a; color: white; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .kart-kapsayici { display: flex; gap: 25px; margin-bottom: 30px; }
+        .kart { flex: 1; background: white; padding: 25px; border-radius: 10px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-bottom: 4px solid #0ea5e9; }
+        .kart h3 { margin: 0; color: #64748b; font-size: 1.2rem; text-transform: uppercase; }
+        .kart p { margin: 15px 0 0 0; font-size: 2.5rem; font-weight: bold; color: #0f172a; }
+        .grafik-kutu { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>📊 İşletme İstatistikleri ve Patron Paneli</h2>
+    </div>
+
+    <div class="kart-kapsayici">
+        <div class="kart" style="border-color: #10b981;">
+            <h3>GÜNCEL TOPLAM CİRO</h3>
+            <p id="toplamCiro">Yükleniyor...</p>
+        </div>
+        <div class="kart" style="border-color: #8b5cf6;">
+            <h3>TAMAMLANAN ARAÇ SAYISI</h3>
+            <p id="aracSayisi">...</p>
+        </div>
+    </div>
+
+    <div class="grafik-kutu">
+        <h3 style="text-align:center; color:#334155; margin-bottom: 20px;">Depo Stok Durumu Analizi</h3>
+        <canvas id="stokGrafik" height="80"></canvas>
+    </div>
+
+    <script>
+        async function istatistikleriGetir() {
+            try {
+                const res = await fetch('https://otoservis-api-4ta4.onrender.com/patron/istatistik');
+                const veri = await res.json();
+
+                // Sayısal değerleri ekrana yazdır (Virgülden sonrasını düzenleyerek)
+                document.getElementById('toplamCiro').innerText = veri.toplam_ciro.toLocaleString('tr-TR') + " ₺";
+                document.getElementById('aracSayisi').innerText = veri.arac_sayisi;
+
+                // Chart.js ile Bar Grafiği Oluşturma
+                const ctx = document.getElementById('stokGrafik').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: veri.stok_adlari,
+                        datasets: [{
+                            label: 'Depodaki Mevcut Adet',
+                            data: veri.stok_miktarlari,
+                            backgroundColor: ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+                            borderRadius: 6,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: { 
+                        responsive: true,
+                        scales: { y: { beginAtZero: true, suggestedMax: 50 } } 
+                    }
+                });
+            } catch (e) {
+                alert("Sunucuya ulaşılamadı. İstatistikler çekilemiyor.");
+            }
+        }
+
+        window.onload = istatistikleriGetir;
+    </script>
+</body>
+</html>

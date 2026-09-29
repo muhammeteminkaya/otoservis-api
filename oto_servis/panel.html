@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tamirhane Hızlı Giriş Paneli</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f1f5f9; padding: 30px 15px; display: flex; justify-content: center; }
+        .card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 520px;
+            padding: 25px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border-top: 6px solid #2563eb;
+        }
+        h2 { font-size: 1.4rem; color: #1e293b; margin-bottom: 20px; }
+        .field { margin-bottom: 15px; }
+        label { display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            background: #fff;
+        }
+        input:focus, select:focus, textarea:focus { border-color: #2563eb; }
+        .plaka-input { font-size: 1.2rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #2563eb;
+            color: #fff;
+            font-size: 1.05rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover { background: #1d4ed8; }
+        .alert {
+            display: none;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .alert-success { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+        .alert-error { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🛠️ Araç Kabul & İş Emri</h2>
+
+    <form id="servisForm">
+        <div class="field">
+            <label>Araç Plakası</label>
+            <input type="text" id="plaka" class="plaka-input" placeholder="Örn: 34TK999" required>
+        </div>
+
+        <div class="field">
+            <label>Yapılan / Yapılacak İşlem</label>
+            <textarea id="islem" rows="3" placeholder="Örn: Triger kayışı değişimi, yağ ve filtre bakımı..." required></textarea>
+        </div>
+
+        <div class="field">
+            <label>İşlem Durumu</label>
+            <select id="durum">
+                <option value="Bekliyor">Bekliyor (Sıraya Alındı)</option>
+                <option value="İşlemde" selected>İşlemde (Liftte / Tamirde)</option>
+                <option value="Parça Bekliyor">Parça Bekliyor</option>
+                <option value="Tamamlandı">Tamamlandı (Teslime Hazır)</option>
+            </select>
+        </div>
+
+        <div class="field">
+            <label>Toplam Tutar (TL)</label>
+            <input type="number" id="tutar" placeholder="0" min="0" step="50" required>
+        </div>
+
+        <button type="submit">Sisteme Kaydet</button>
+    </form>
+
+    <div id="bilgiKutusu" class="alert"></div>
+</div>
+
+<script>
+    document.getElementById('servisForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const bilgi = document.getElementById('bilgiKutusu');
+        bilgi.style.display = 'none';
+
+        const veri = {
+            plaka: document.getElementById('plaka').value.trim().toUpperCase(),
+            yapilan_islem: document.getElementById('islem').value.trim(),
+            durum: document.getElementById('durum').value,
+            toplam_tutar: parseFloat(document.getElementById('tutar').value) || 0
+        };
+
+        try {
+            const res = await fetch('http://127.0.0.1:8080/servis-kaydi-olustur/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(veri)
+            });
+
+            if (!res.ok) throw new Error('Kayıt oluşturulamadı');
+
+            bilgi.className = 'alert alert-success';
+            bilgi.innerText = `✓ ${veri.plaka} aracı başarıyla sisteme kaydedildi!`;
+            bilgi.style.display = 'block';
+
+            // Formu temizle
+            document.getElementById('servisForm').reset();
+            document.getElementById('durum').value = "İşlemde";
+
+        } catch (err) {
+            bilgi.className = 'alert alert-error';
+            bilgi.innerText = 'Hata: Kayıt eklenemedi, sunucuyu kontrol edin.';
+            bilgi.style.display = 'block';
+        }
+    });
+</script>
+
+</body>
+</html>

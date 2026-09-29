@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Çırak Paneli - Parça Takibi</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f8fafc; padding: 20px; color: #1e293b; }
+        
+        /* Üst Menü */
+        .header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: #f59e0b; color: white; padding: 15px 20px; border-radius: 8px; 
+            margin-bottom: 20px; max-width: 600px; margin: 0 auto 20px auto; 
+        }
+        .logout-btn { background: #b45309; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        
+        /* İçerik Kutusu */
+        .container { max-width: 600px; margin: 0 auto; }
+        h2 { margin-bottom: 20px; color: #d97706; text-align: center; }
+        
+        /* Görev Kartları */
+        .task-card { 
+            background: white; padding: 20px; border-radius: 10px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 6px solid #f59e0b; 
+            margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; 
+        }
+        .task-info h3 { font-size: 1.25rem; color: #1e293b; margin-bottom: 8px; }
+        .plaka-badge { 
+            display: inline-block; background: #e2e8f0; padding: 6px 12px; 
+            border-radius: 6px; color: #0f172a; font-family: monospace; font-size: 1.1rem; 
+            border: 1px solid #cbd5e1; font-weight: bold; letter-spacing: 1px;
+        }
+        
+        /* Alındı Butonu */
+        .btn-tamamla { 
+            background: #10b981; color: white; border: none; padding: 14px 20px; 
+            border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; 
+            transition: background 0.2s; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+        }
+        .btn-tamamla:hover { background: #059669; }
+
+        /* Görev Yoksa Çıkacak Ekran */
+        .bos-durum { text-align: center; padding: 50px 20px; color: #94a3b8; font-size: 1.2rem; background: white; border-radius: 10px; border: 2px dashed #cbd5e1; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>👤 Kolay Gelsin, <span id="kullaniciAdiDisplay">Çırak</span></div>
+        <button class="logout-btn" onclick="cikisYap()">Çıkış Yap</button>
+    </div>
+
+    <div class="container">
+        <h2>🏃‍♂️ Alınacak Parçalar Listesi</h2>
+        <div id="gorevListesi">
+            <!-- Görevler buraya JS ile yüklenecek -->
+        </div>
+    </div>
+
+    <script>
+        // 1. GÜVENLİK KONTROLÜ: Sadece 'cirak' rolündekiler girebilir
+        if (localStorage.getItem('kullaniciRolu') !== 'cirak') {
+            alert("Bu sayfaya erişim yetkiniz yok! Çırak girişi yapmalısınız.");
+            window.location.href = 'login.html';
+        }
+        
+        document.getElementById('kullaniciAdiDisplay').innerText = localStorage.getItem('aktifKullanici').toUpperCase();
+
+        function cikisYap() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        // 2. BEKLEYEN GÖREVLERİ (ALINACAK PARÇALARI) ÇEKME
+        async function gorevleriGetir() {
+            const liste = document.getElementById('gorevListesi');
+            liste.innerHTML = "<div class='bos-durum'>Veriler yükleniyor...</div>";
+
+            try {
+                // Backend'den 'Bekliyor' durumundaki görevleri istiyoruz
+                const res = await fetch('https://otoservis-api-4ta4.onrender.com/cirak/gorevler');
+                if (!res.ok) throw new Error("Veri çekilemedi");
+                
+                const gorevler = await res.json();
+                
+                liste.innerHTML = ""; // Yükleniyor yazısını temizle
+
+                if (gorevler.length === 0) {
+                    liste.innerHTML = "<div class='bos-durum'>🎉 Harika! Tüm parçalar alınmış, bekleyen iş yok.</div>";
+                    return;
+                }
+
+                // Gelen görevleri ekrana kart olarak basıyoruz
+                gorevler.forEach(gorev => {
+                    liste.innerHTML += `
+                        <div class="task-card">
+                            <div class="task-info">
+                                <h3>📦 ${gorev.alinacak_parca}</h3>
+                                <div class="plaka-badge">🚗 ${gorev.plaka}</div>
+                            </div>
+                            <button class="btn-tamamla" onclick="goreviTamamla(${gorev.id})">✓ ALINDI</button>
+                        </div>
+                    `;
+                });
+
+            } catch (err) {
+                liste.innerHTML = "<div class='bos-durum' style='color:#ef4444;'>Hata: Sunucuya bağlanılamadı. API açık mı kontrol edin.</div>";
+            }
+        }
+
+        // 3. PARÇA ALINDI OLARAK İŞARETLEME (DURUM GÜNCELLEME)
+        async function goreviTamamla(gorevId) {
+            try {
+                // Backend'deki PUT metoduna istek atıyoruz
+                const res = await fetch(`https://otoservis-api-4ta4.onrender.com/cirak/gorev-tamamla/${gorevId}`, {
+                    method: 'PUT'
+                });
+                
+                if (res.ok) {
+                    // İşlem başarılıysa listeyi tekrar çağırıp güncelliyoruz
+                    gorevleriGetir(); 
+                } else {
+                    alert("Parça güncellenirken bir hata oluştu!");
+                }
+            } catch (err) {
+                alert("Bağlantı hatası!");
+            }
+        }
+
+        // Sayfa açıldığı anda otomatik olarak listeyi yükle
+        window.onload = gorevleriGetir;
+    </script>
+</body>
+</html>

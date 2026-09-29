@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usta Paneli - Araç Kabul</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f8fafc; padding: 20px; color: #1e293b; }
+        .header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: #2563eb; color: white; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px;
+        }
+        .logout-btn { background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { margin-bottom: 20px; color: #2563eb; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .form-group { flex: 1; }
+        label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; color: #64748b; text-transform: uppercase; }
+        input, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; }
+        input:focus, textarea:focus { border-color: #2563eb; }
+        
+        .parca-ekle-alani { background: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .parca-input-row { display: flex; gap: 10px; }
+        .btn-ekle { background: #10b981; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        
+        #parcaListesi { list-style: none; margin-top: 10px; }
+        #parcaListesi li { background: white; padding: 8px 10px; margin-bottom: 5px; border-radius: 4px; border-left: 4px solid #10b981; display: flex; justify-content: space-between; }
+        .sil-btn { color: #ef4444; cursor: pointer; font-weight: bold; }
+
+        .btn-kaydet { width: 100%; padding: 15px; background: #2563eb; color: white; font-size: 1.1rem; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px; }
+        .btn-kaydet:hover { background: #1d4ed8; }
+        
+        #mesajKutusu { display: none; padding: 12px; border-radius: 6px; margin-top: 15px; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <!-- Üst Menü -->
+    <div class="header" style="max-width: 600px; margin: 0 auto 20px auto;">
+        <div>👤 Hoş Geldin, <span id="kullaniciAdiDisplay">Usta</span></div>
+        <button class="logout-btn" onclick="cikisYap()">Çıkış Yap</button>
+    </div>
+
+    <!-- Ana Form -->
+    <div class="container">
+        <h2>🛠️ Yeni İş Emri Oluştur</h2>
+        
+        <form id="ustaForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Plaka</label>
+                    <input type="text" id="plaka" placeholder="" required style="text-transform: uppercase;">
+                </div>
+                <div class="form-group">
+                    <label>Marka</label>
+                    <input type="text" id="markaModel" placeholder="" required>
+                </div>
+                <div class="form-group">
+                    <label>Yıl</label>
+                    <input type="number" id="yil" placeholder="" required>
+                </div>
+				<div class="input-group">
+                     <label>MÜŞTERİ TELEFONU (Başında 0 olmadan)</label>
+                     <input type="text" id="telefon" placeholder="" maxlength="10">
+                </div>
+            </div>
+			    <div id="gecmisBilgisi" style="display: none; background: #e0f2fe; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem; color: #0369a1; border-left: 4px solid #0ea5e9;">
+                <!-- JavaScript ile buraya veriler dolacak -->
+                </div>
+
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Usta Notu (İsteğe Bağlı)</label>
+                <textarea id="ustaNotu" rows="2" placeholder="Örn: Müşteri rölanti dalgalanmasından şikayetçi..."></textarea>
+            </div>
+
+            <!-- Çırak İçin Parça İsteme Bölümü -->
+            <div class="parca-ekle-alani">
+                <label>🛠️ Çıraktan İstenecek Parçalar</label>
+                <div class="parca-input-row">
+                    <input type="text" id="yeniParca" placeholder="Örn: Yağ Filtresi">
+                    <button type="button" class="btn-ekle" onclick="listeyeParcaEkle()">+ Ekle</button>
+                </div>
+                <ul id="parcaListesi"></ul>
+            </div>
+
+            <button type="submit" class="btn-kaydet">Sisteme Kaydet ve Çırağa Bildir</button>
+        </form>
+        
+        <div id="mesajKutusu"></div>
+    </div>
+
+    <script>
+        // 1. GÜVENLİK KONTROLÜ: Sadece 'usta' rolündekiler girebilir
+        if (localStorage.getItem('kullaniciRolu') !== 'usta') {
+            alert("Bu sayfaya erişim yetkiniz yok! Lütfen giriş yapın.");
+            window.location.href = 'login.html';
+        }
+        
+        document.getElementById('kullaniciAdiDisplay').innerText = localStorage.getItem('aktifKullanici').toUpperCase();
+
+        function cikisYap() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        // 2. PARÇA LİSTESİ YÖNETİMİ
+        let alinacakParcalar = [];
+
+        function listeyeParcaEkle() {
+            const parcaInput = document.getElementById('yeniParca');
+            const parcaAdi = parcaInput.value.trim();
+            
+            if (parcaAdi !== "") {
+                alinacakParcalar.push({ alinacak_parca: parcaAdi });
+                arayuzuGuncelle();
+                parcaInput.value = ""; // Kutuyu temizle
+                parcaInput.focus();
+            }
+        }
+
+        function parcayiSil(index) {
+            alinacakParcalar.splice(index, 1);
+            arayuzuGuncelle();
+        }
+
+        function arayuzuGuncelle() {
+            const liste = document.getElementById('parcaListesi');
+            liste.innerHTML = "";
+            alinacakParcalar.forEach((p, index) => {
+                liste.innerHTML += `<li>${p.alinacak_parca} <span class="sil-btn" onclick="parcayiSil(${index})">X</span></li>`;
+            });
+        }
+		
+		document.getElementById('plaka').addEventListener('blur', async (e) => {
+            const plaka = e.target.value.trim().toUpperCase();
+            const gecmisKutusu = document.getElementById('gecmisBilgisi');
+            
+            if (plaka.length < 5) {
+                gecmisKutusu.style.display = 'none';
+                return;
+            }
+
+            try {
+                const res = await fetch(`https://otoservis-api-4ta4.onrender.com/usta/arac-gecmisi/${plaka}`);
+                const gecmis = await res.json();
+
+                if (gecmis && gecmis.length > 0) {
+                    let html = `<strong>📜 ${plaka} Geçmiş Servis Kayıtları:</strong><ul style="margin-top: 5px; padding-left: 20px;">`;
+                    gecmis.forEach(kayit => {
+                        const tarih = new Date(kayit.kayit_tarihi).toLocaleDateString('tr-TR');
+                        html += `<li><strong>${tarih}:</strong> ${kayit.usta_notu || 'Not girilmemiş'} (Tutar: ${kayit.toplam_tutar} TL)</li>`;
+                    });
+                    html += "</ul>";
+                    gecmisKutusu.innerHTML = html;
+                    gecmisKutusu.style.display = 'block';
+                } else {
+                    gecmisKutusu.innerHTML = `✨ <strong>${plaka}</strong> plakalı araç servisimize ilk defa geliyor.`;
+                    gecmisKutusu.style.display = 'block';
+                }
+            } catch (err) {
+                console.log("Geçmiş sorgulanamadı.");
+            }
+        });
+
+        // 3. FORMU BACKEND'E GÖNDERME
+        document.getElementById('ustaForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const mesaj = document.getElementById('mesajKutusu');
+            
+            const veri = {
+                plaka: document.getElementById('plaka').value.trim().toUpperCase(),
+                marka_model: document.getElementById('markaModel').value.trim(),
+                yil: parseInt(document.getElementById('yil').value),
+				telefon : document.getElementById('telefon').value.trim(),
+                usta_notu: document.getElementById('ustaNotu').value.trim(),
+                alinacak_parcalar: alinacakParcalar
+            };
+
+            try {
+                const res = await fetch('https://otoservis-api-4ta4.onrender.com/usta/is-emri-olustur', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(veri)
+                });
+
+                if (!res.ok) throw new Error("İş emri oluşturulamadı!");
+
+                mesaj.style.display = 'block';
+                mesaj.style.background = '#dcfce7';
+                mesaj.style.color = '#15803d';
+                mesaj.innerText = "✓ İş emri başarıyla oluşturuldu ve çırağa iletildi!";
+
+                // Formu sıfırla
+                document.getElementById('ustaForm').reset();
+                alinacakParcalar = [];
+                arayuzuGuncelle();
+
+                setTimeout(() => { mesaj.style.display = 'none'; }, 4000);
+
+            } catch (err) {
+                mesaj.style.display = 'block';
+                mesaj.style.background = '#fee2e2';
+                mesaj.style.color = '#b91c1c';
+                mesaj.innerText = "Hata: Sunucuya bağlanılamadı.";
+            }
+        });
+    </script>
+</body>
+</html>

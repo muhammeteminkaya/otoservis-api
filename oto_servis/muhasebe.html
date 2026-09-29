@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Muhasebe Paneli - Hesap Kesim</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f8fafc; padding: 20px; color: #1e293b; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #0f766e; color: white; padding: 15px 20px; border-radius: 8px; margin: 0 auto 20px auto; max-width: 900px; }
+        .logout-btn { background: #0f172a; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { margin-bottom: 20px; color: #0f766e; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; color: #475569; font-size: 0.85rem; text-transform: uppercase; }
+        .plaka { font-weight: bold; font-size: 1.1rem; color: #0f766e; }
+        input, select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: bold; }
+        .btn-kaydet { background: #0f766e; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-kaydet:hover { background: #115e59; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>👤 Hoş Geldin, Kasa / Muhasebe</div>
+        <button class="logout-btn" onclick="cikisYap()">Çıkış Yap</button>
+    </div>
+
+    <div class="container">
+        <h2>💰 Araç Hesap ve Teslim Paneli</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Plaka / Araç</th>
+                    <th>Usta Notu</th>
+                    <th>Güncel Durum</th>
+                    <th>Toplam Tutar (TL)</th>
+                    <th>İşlem</th>
+                </tr>
+            </thead>
+            <tbody id="isEmirleriListesi"></tbody>
+        </table>
+    </div>
+
+    <script>
+        if (localStorage.getItem('kullaniciRolu') !== 'muhasebe') {
+            alert("Sadece Muhasebe yetkilisi girebilir.");
+            window.location.href = 'login.html';
+        }
+        
+        function cikisYap() { 
+            localStorage.clear(); 
+            window.location.href = 'login.html'; 
+        }
+
+        async function isEmirleriniGetir() {
+            const liste = document.getElementById('isEmirleriListesi');
+            try {
+                const res = await fetch('https://otoservis-api-4ta4.onrender.com/muhasebe/is-emirleri');
+                const veriler = await res.json();
+                liste.innerHTML = "";
+                veriler.forEach(islem => {
+                    liste.innerHTML += `
+                        <tr>
+                            <td><div class="plaka">${islem.plaka}</div><small>${islem.marka_model}</small></td>
+                            <td style="color:#64748b;">${islem.usta_notu || '-'}</td>
+                            <td>
+                                <select id="durum_${islem.id}">
+                                    <option value="İşlemde" ${islem.durum === 'İşlemde' ? 'selected' : ''}>İşlemde</option>
+                                    <option value="Parça Bekliyor" ${islem.durum === 'Parça Bekliyor' ? 'selected' : ''}>Parça Bekliyor</option>
+                                    <option value="Tamamlandı - Teslime Hazır" ${islem.durum === 'Tamamlandı - Teslime Hazır' ? 'selected' : ''}>Teslime Hazır</option>
+                                </select>
+                            </td>
+                            <td><input type="number" id="tutar_${islem.id}" value="${islem.toplam_tutar}" style="width:100px;"> ₺</td>
+                            <td>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn-kaydet" onclick="guncelle(${islem.id}, '${islem.plaka}', '${islem.telefon}')">Uygula</button>
+                                    <button onclick="faturaYazdir('${islem.plaka}', '${islem.marka_model}', '${islem.usta_notu}', ${islem.toplam_tutar})" style="background: #eab308; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;" title="Fatura Yazdır">🖨️</button>
+                                    <button onclick="arsivle(${islem.id})" style="background: #64748b; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;" title="Arşive Kaldır">📦</button>
+                                    <button onclick="kayitSil(${islem.id})" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;" title="Kaydı Sil">X</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (e) { 
+                liste.innerHTML = "<tr><td colspan='5'>Bağlantı hatası</td></tr>"; 
+            }
+        }
+
+        async function guncelle(id, plaka, telefon) {
+            const durum = document.getElementById(`durum_${id}`).value;
+            const tutar = document.getElementById(`tutar_${id}`).value;
+    
+            await fetch(`https://otoservis-api-4ta4.onrender.com/muhasebe/is-emri-guncelle/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ durum: durum, toplam_tutar: parseFloat(tutar) })
+            });
+
+            if (durum === 'Tamamlandı - Teslime Hazır') {
+                if (telefon && telefon !== 'null' && telefon !== 'undefined' && telefon.length === 10) {
+                    const mesaj = `🚗 Merhaba, ${plaka} plakalı aracınızın servis işlemleri tamamlanmıştır. Toplam hesap: ${tutar} TL. Aracınızı işletmemizden teslim alabilirsiniz. İyi günler dileriz!`;
+                    const whatsappUrl = `https://web.whatsapp.com/send?phone=90${telefon}&text=${encodeURIComponent(mesaj)}`;
+                    window.open(whatsappUrl, '_blank'); 
+                } else {
+                    alert("Not: Bu araca ait geçerli bir telefon numarası bulunmadığı için WhatsApp mesajı oluşturulamadı.");
+                }
+            }
+
+            alert("Araç durumu ve hesabı güncellendi!");
+            isEmirleriniGetir();
+        }
+
+        async function arsivle(id) {
+            if (confirm("Bu kaydı arşive kaldırmak istediğinize emin misiniz? (Usta geçmişinde görünmeye devam edecek, listeden gizlenecek.)")) {
+                try {
+                    const res = await fetch(`https://otoservis-api-4ta4.onrender.com/muhasebe/is-emri-arsivle/${id}`, {
+                        method: 'PUT'
+                    });
+                    if (res.ok) {
+                        alert("Kayıt başarıyla arşive kaldırıldı ve listeden gizlendi.");
+                        isEmirleriniGetir();
+                    } else {
+                        alert("Arşivleme başarısız oldu.");
+                    }
+                } catch (err) {
+                    alert("Sunucuya ulaşılamadı.");
+                }
+            }
+        }
+
+        async function kayitSil(id) {
+            if (confirm("Bu aracı sistemden tamamen silmek istediğinize emin misiniz?")) {
+                try {
+                    const res = await fetch(`https://otoservis-api-4ta4.onrender.com/muhasebe/is-emri-sil/${id}`, {
+                        method: 'DELETE'
+                    });
+                    if (res.ok) {
+                        alert("Kayıt başarıyla silindi.");
+                        isEmirleriniGetir(); 
+                    } else {
+                        alert("Silme işlemi başarısız. API tarafını kontrol edin.");
+                    }
+                } catch (err) {
+                    alert("Sunucuya ulaşılamadı.");
+                }
+            }
+        }
+
+        function faturaYazdir(plaka, marka, notlar, tutar) {
+            const tarih = new Date().toLocaleDateString('tr-TR');
+            const saat = new Date().toLocaleTimeString('tr-TR');
+            const faturaPenceresi = window.open('', '_blank', 'width=800,height=600');
+            
+            const htmlIcerik = `
+                <html>
+                <head>
+                    <title>Servis Fişi - ${plaka}</title>
+                    <style>
+                        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #333; }
+                        .header { text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 15px; margin-bottom: 30px; }
+                        .header h1 { margin: 0; color: #0f766e; letter-spacing: 1px; }
+                        .header p { margin: 5px 0; color: #64748b; font-size: 0.95rem; }
+                        .bilgi-karti { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+                        .detay { margin-bottom: 12px; font-size: 1.1rem; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px; }
+                        .detay strong { display: inline-block; width: 160px; color: #475569; }
+                        .tutar-kutu { margin-top: 30px; background: #0f766e; color: white; padding: 20px; text-align: right; font-size: 1.5rem; font-weight: bold; border-radius: 8px; }
+                        .footer { text-align: center; margin-top: 50px; font-size: 0.9rem; color: #94a3b8; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>KAYA OTO SERVİS</h1>
+                        <p>Oto Sanayi Sitesi, Başakşehir / İstanbul</p>
+                        <p>Tarih: ${tarih} - Saat: ${saat}</p>
+                    </div>
+                    
+                    <div class="bilgi-karti">
+                        <div class="detay"><strong>Araç Plakası:</strong> ${plaka}</div>
+                        <div class="detay"><strong>Marka / Model:</strong> ${marka && marka !== 'undefined' ? marka : 'Belirtilmedi'}</div>
+                        <div class="detay" style="border: none;"><strong>Yapılan İşlemler:</strong> ${notlar && notlar !== 'null' && notlar !== 'undefined' ? notlar : 'Detay girilmedi'}</div>
+                    </div>
+                    
+                    <div class="tutar-kutu">
+                        GENEL TOPLAM: ${tutar} TL
+                    </div>
+                    
+                    <div class="footer">
+                        Bizi tercih ettiğiniz için teşekkür ederiz. Kazasız ve güvenli sürüşler dileriz.
+                        <br><br>
+                        <em>İmza / Kaşe</em>
+                    </div>
+                    
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                        }
+                    <\/script>
+                </body>
+                </html>
+            `;
+            
+            faturaPenceresi.document.write(htmlIcerik);
+            faturaPenceresi.document.close();
+        }
+
+        window.onload = isEmirleriniGetir;
+    </script>
+</body>
+</html>
