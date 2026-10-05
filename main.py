@@ -55,7 +55,7 @@ def veritabanini_hazirla():
             KullaniciDB(kullanici_adi="usta", sifre="123", rol="usta"),
             KullaniciDB(kullanici_adi="cirak", sifre="123", rol="cirak"),
             KullaniciDB(kullanici_adi="depo", sifre="123", rol="depo"),
-            KullaniciDB(kullanici_adi="muhasebe", sifre="123", rol="muhasebe")
+            KullaniciDB(kullanici_adi="muhasebe", sifre="123", rol="muhasebe"),
             KullaniciDB(kullanici_adi="patron", sifre="123", rol="patron")
         ])
         db.add_all([
