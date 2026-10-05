@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 # --- 1. VERİ TABANI AYARLARI ---
-SQLALCHEMY_DATABASE_URL = "sqlite:///./otoservis_v5.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./otoservis_v1.1.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -56,6 +56,7 @@ def veritabanini_hazirla():
             KullaniciDB(kullanici_adi="cirak", sifre="123", rol="cirak"),
             KullaniciDB(kullanici_adi="depo", sifre="123", rol="depo"),
             KullaniciDB(kullanici_adi="muhasebe", sifre="123", rol="muhasebe")
+            KullaniciDB(kullanici_adi="patron", sifre="123", rol="patron")
         ])
         db.add_all([
             StokDB(parca_adi="5W-30 Motor Yağı (Litre)", miktar=50),
