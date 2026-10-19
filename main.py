@@ -228,8 +228,8 @@ def is_emri_arsivle(id: int, db: Session = Depends(get_db)):
 
 
 
-@app.get("/patron/istatistik")
-def patron_istatistik(db: Session = Depends(get_db)):
+@app.get("/muhasebe/istatistik")
+def muhasebe_istatistik(db: Session = Depends(get_db)):
     # 1. Ciro ve Araç Sayısı Hesaplama
     tamamlananlar = db.query(IsEmriDB).filter(
         IsEmriDB.durum.in_(["Tamamlandı - Teslime Hazır", "Arşivlendi"])
@@ -259,8 +259,8 @@ def patron_istatistik(db: Session = Depends(get_db)):
         "personel_cirolari": personel_cirolari
     }
 
-@app.get("/patron/arama")
-def patron_arama(plaka: str, db: Session = Depends(get_db)):
+@app.get("/muhasebe/arama")
+def muhasebe_arama(plaka: str, db: Session = Depends(get_db)):
     # Sadece o plakaya ait ve muhasebenin "Arşive" kaldırdığı (Soft-Delete) kayıtları getir
     kayitlar = db.query(IsEmriDB).filter(
         IsEmriDB.plaka == plaka.upper().replace(" ", ""), # Boşlukları silip büyük harfe çevirir (örn: 34 abc 12 -> 34ABC12)
