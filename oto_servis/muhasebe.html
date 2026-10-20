@@ -7,7 +7,7 @@
     
     <!-- PWA Bağlantıları -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f766e">
+    <meta name="theme-color" content="#0f766e" id="theme-color-meta">
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');
@@ -15,55 +15,84 @@
     </script>
 
     <style>
+        /* TEMEL DEĞİŞKENLER VE AÇIK TEMA (LIGHT MODE) */
+        :root {
+            --bg-body: #f8fafc;
+            --bg-container: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --header-bg: #0f766e;
+            --table-header-bg: #f1f5f9;
+        }
+
+        /* KARANLIK TEMA (DARK MODE) */
+        body.dark-mode {
+            --bg-body: #0f172a;
+            --bg-container: #1e293b;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --header-bg: #020617;
+            --table-header-bg: #0f172a;
+        }
+
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
-        body { background-color: #f8fafc; padding: 15px; color: #1e293b; }
+        body { background-color: var(--bg-body); padding: 15px; color: var(--text-main); transition: background-color 0.3s ease; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; background: #0f766e; color: white; padding: 15px; border-radius: 8px; margin: 0 auto 20px auto; max-width: 900px; }
-        .logout-btn { background: #0f172a; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: var(--header-bg); color: white; padding: 15px; border-radius: 8px; margin: 0 auto 20px auto; max-width: 900px; transition: background-color 0.3s ease; }
+        .header-sag { display: flex; gap: 10px; align-items: center; }
         
-        .container { max-width: 900px; margin: 0 auto 20px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        h2 { margin-bottom: 15px; color: #0f766e; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; font-size: 1.3rem; }
+        /* Tema Butonu */
+        .tema-btn { background: transparent; border: 1px solid white; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 1.2rem; transition: 0.3s; }
+        .tema-btn:hover { background: rgba(255,255,255,0.2); }
+        
+        .logout-btn { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        
+        .container { max-width: 900px; margin: 0 auto 20px auto; background: var(--bg-container); padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: background-color 0.3s ease; }
+        h2 { margin-bottom: 15px; color: #0ea5e9; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; font-size: 1.3rem; }
         
         /* Ciro Kartları */
         .kart-kapsayici { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
-        .kart { flex: 1; min-width: 140px; background: white; padding: 15px; border-radius: 8px; text-align: center; border-bottom: 4px solid #0ea5e9; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .kart h3 { margin: 0; color: #64748b; font-size: 0.9rem; }
-        .kart p { margin: 10px 0 0 0; font-size: 1.5rem; font-weight: bold; color: #0f172a; }
+        .kart { flex: 1; min-width: 140px; background: var(--bg-container); padding: 15px; border-radius: 8px; text-align: center; border-bottom: 4px solid #0ea5e9; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .kart h3 { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
+        .kart p { margin: 10px 0 0 0; font-size: 1.5rem; font-weight: bold; color: var(--text-main); }
 
         /* Arşiv Arama Çubuğu */
         .arama-kutu { display: flex; gap: 10px; margin-bottom: 20px; }
-        .arama-kutu input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1rem; }
-        .arama-kutu button { padding: 10px 15px; background: #0f172a; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .arama-kutu input { flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem; background: var(--bg-body); color: var(--text-main); }
+        .arama-kutu button { padding: 10px 15px; background: #0ea5e9; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
         /* Tablolar ve Plaka Linki */
         .table-responsive { width: 100%; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; min-width: 600px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
-        th { background: #f1f5f9; color: #475569; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
+        th { background: var(--table-header-bg); color: var(--text-muted); }
         
-        .plaka-link { display: inline-block; font-weight: bold; font-size: 1.1rem; color: #0ea5e9; background: #e0f2fe; padding: 4px 8px; border-radius: 4px; cursor: pointer; text-decoration: none; border: 1px solid #bae6fd; transition: 0.2s; }
-        .plaka-link:hover { background: #bae6fd; color: #0284c7; }
+        .plaka-link { display: inline-block; font-weight: bold; font-size: 1.1rem; color: #0ea5e9; background: var(--bg-body); padding: 4px 8px; border-radius: 4px; cursor: pointer; text-decoration: none; border: 1px solid var(--border-color); transition: 0.2s; }
+        .plaka-link:hover { background: #0ea5e9; color: white; }
         
-        select, input[type="number"] { padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-weight: bold; max-width: 120px; }
+        select, input[type="number"] { padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; font-weight: bold; max-width: 120px; background: var(--bg-body); color: var(--text-main); }
         .btn-grup { display: flex; gap: 5px; flex-wrap: wrap; }
         .btn { border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; }
-        .btn-uygula { background: #0f766e; }
+        .btn-uygula { background: #0ea5e9; }
         .btn-fatura { background: #eab308; }
         .btn-arsiv { background: #64748b; }
         .btn-sil { background: #ef4444; }
 
         /* Parça Detay Modalı (Pop-up) */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
-        .modal-content { background: white; width: 100%; max-width: 400px; padding: 20px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
-        .modal-header h3 { color: #0f766e; margin: 0; }
+        .modal-content { background: var(--bg-container); width: 100%; max-width: 400px; padding: 20px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
+        .modal-header h3 { color: #0ea5e9; margin: 0; }
         .btn-kapat { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .parca-liste { list-style: none; margin-bottom: 15px; max-height: 300px; overflow-y: auto; }
-        .parca-liste li { padding: 10px; border-bottom: 1px solid #f1f5f9; font-weight: bold; }
+        .parca-liste li { padding: 10px; border-bottom: 1px solid var(--border-color); font-weight: bold; color: var(--text-main); }
 
         @media screen and (max-width: 600px) {
             body { padding: 10px; }
             .header { flex-direction: column; gap: 10px; text-align: center; }
+            .header-sag { justify-content: center; width: 100%; }
             .kart-kapsayici { flex-direction: column; }
             .arama-kutu { flex-direction: column; }
             .btn-grup { flex-direction: column; width: 100%; }
@@ -75,7 +104,10 @@
 
     <div class="header">
         <div>👤 Yönetim & Muhasebe Paneli</div>
-        <button class="logout-btn" onclick="cikisYap()">Çıkış Yap</button>
+        <div class="header-sag">
+            <button class="tema-btn" onclick="temaDegistir()" id="temaIkonu">🌙</button>
+            <button class="logout-btn" onclick="cikisYap()">Çıkış Yap</button>
+        </div>
     </div>
 
     <!-- CİRO KARTLARI -->
@@ -111,7 +143,7 @@
     <!-- BEKLEYEN HESAP KESİM LİSTESİ -->
     <div class="container">
         <h2>💰 Bekleyen Hesap Kesim Listesi</h2>
-        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 10px;">💡 Not: Parça detaylarını görmek için plakalara tıklayın.</p>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">💡 Not: Parça detaylarını görmek için plakalara tıklayın.</p>
         <div class="table-responsive">
             <table>
                 <thead>
@@ -134,6 +166,32 @@
     </div>
 
     <script>
+        // 1. TEMA (DARK MODE) YÖNETİMİ
+        const body = document.body;
+        const temaIkonu = document.getElementById('temaIkonu');
+        const themeMeta = document.getElementById('theme-color-meta');
+
+        // Sayfa yüklendiğinde eski temayı hatırla
+        if (localStorage.getItem('tema') === 'karanlik') {
+            body.classList.add('dark-mode');
+            temaIkonu.innerText = '☀️';
+            themeMeta.setAttribute('content', '#020617');
+        }
+
+        function temaDegistir() {
+            body.classList.toggle('dark-mode');
+            if (body.classList.contains('dark-mode')) {
+                localStorage.setItem('tema', 'karanlik');
+                temaIkonu.innerText = '☀️';
+                themeMeta.setAttribute('content', '#020617');
+            } else {
+                localStorage.setItem('tema', 'aydinlik');
+                temaIkonu.innerText = '🌙';
+                themeMeta.setAttribute('content', '#0f766e');
+            }
+        }
+
+        // 2. YETKİ KONTROLÜ
         if (localStorage.getItem('kullaniciRolu') !== 'muhasebe') {
             alert("Yetkisiz Giriş!");
             window.location.href = 'login.html';
@@ -166,9 +224,9 @@
                         <tr>
                             <td>
                                 <div class="plaka-link" onclick="parcaDetayGoster(${islem.id})" title="Parçaları Gör">${islem.plaka}</div>
-                                <br><small>${islem.marka_model}</small>
+                                <br><small style="color:var(--text-muted);">${islem.marka_model}</small>
                             </td>
-                            <td style="color:#64748b;">${islem.usta_notu || '-'}</td>
+                            <td style="color:var(--text-muted);">${islem.usta_notu || '-'}</td>
                             <td>
                                 <select id="durum_${islem.id}">
                                     <option value="İşlemde" ${islem.durum === 'İşlemde' ? 'selected' : ''}>İşlemde</option>
@@ -206,13 +264,13 @@
                 islem.alinacak_parcalar.forEach(p => {
                     const isim = p.isim || p.alinacak_parca;
                     if (p.alindi_mi) {
-                        ul.innerHTML += `<li style="color:#15803d; background:#dcfce7;">✅ ${isim} (Çırak Aldı)</li>`;
+                        ul.innerHTML += `<li style="color:#10b981;">✅ ${isim} (Çırak Aldı)</li>`;
                     } else {
-                        ul.innerHTML += `<li style="color:#b45309; background:#fef3c7;">⏳ ${isim} (Bekliyor)</li>`;
+                        ul.innerHTML += `<li style="color:#f59e0b;">⏳ ${isim} (Bekliyor)</li>`;
                     }
                 });
             } else {
-                ul.innerHTML = `<li style="color:#64748b;">Bu araç için parça talebi girilmemiş.</li>`;
+                ul.innerHTML = `<li style="color:var(--text-muted);">Bu araç için parça talebi girilmemiş.</li>`;
             }
 
             document.getElementById('parcaModal').style.display = 'flex';
@@ -238,7 +296,7 @@
                 const veri = await res.json();
                 tbody.innerHTML = "";
                 veri.forEach(kayit => {
-                    tbody.innerHTML += `<tr><td><span class="plaka-link" style="background:#f1f5f9; border-color:#cbd5e1; color:#334155; cursor:default;">${kayit.plaka}</span></td><td>${kayit.marka_model}</td><td>${kayit.usta_notu}</td><td><b>${kayit.toplam_tutar} ₺</b></td></tr>`;
+                    tbody.innerHTML += `<tr><td><span class="plaka-link" style="cursor:default;">${kayit.plaka}</span></td><td>${kayit.marka_model}</td><td>${kayit.usta_notu}</td><td><b>${kayit.toplam_tutar} ₺</b></td></tr>`;
                 });
                 
                 sonucAlani.style.display = "block";
