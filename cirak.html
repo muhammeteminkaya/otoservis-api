@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Çırak Paneli - Parça Takip</title>
+    
+    <!-- PWA Bağlantıları -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#f59e0b">
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f8fafc; padding: 15px; color: #1e293b; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; background: #d97706; color: white; padding: 15px; border-radius: 8px; margin: 0 auto 20px auto; max-width: 800px; }
+        .logout-btn { background: #78350f; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        
+        .container { max-width: 800px; margin: 0 auto; }
+        h2 { margin-bottom: 20px; color: #d97706; border-bottom: 2px solid #fde68a; padding-bottom: 10px; font-size: 1.3rem; }
+        
+        /* Araç Kartları */
+        .arac-karti { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-left: 5px solid #d97706; }
+        .karti-baslik { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+        .plaka { font-size: 1.4rem; font-weight: bold; color: #1e293b; background: #f1f5f9; padding: 5px 10px; border-radius: 6px; border: 1px solid #cbd5e1; }
+        .marka { color: #64748b; font-size: 0.95rem; font-weight: bold; }
+        
+        /* Parça Listesi */
+        .parca-listesi { list-style: none; }
+        .parca-item { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #e2e8f0; transition: all 0.3s ease; }
+        
+        /* Alındı Olan Parçaların Görünümü */
+        .parca-item.alindi { background: #dcfce7; border-color: #86efac; }
+        .parca-item.alindi .parca-isim { color: #15803d; }
+        
+        .parca-isim { font-weight: bold; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; }
+        
+        .btn-al { background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-al:hover { background: #059669; }
+        .parca-item.alindi .btn-al { display: none; }
+        
+        .tik-isareti { display: none; font-size: 1.2rem; }
+        .parca-item.alindi .tik-isareti { display: inline-block; }
+
+        .bilgi-mesaji { text-align: center; color: #64748b; font-weight: bold; padding: 20px; background: white; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>🏃‍♂️ Kolay Gelsin, Çırak</div>
+        <button class="logout-btn" onclick="cikisYap()">Çıkış Yap</button>
+    </div>
+
+    <div class="container">
+        <h2>📦 Alınacak Parçalar Listesi</h2>
+        <div id="aracKartlariAlani">
+            <div class="bilgi-mesaji">Yükleniyor...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://otoservis-api-4ta4.onrender.com';
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function oturumSonlandir(mesaj) {
+            if (mesaj) alert(mesaj);
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        function authHeaders(extra = {}) {
+            return {
+                'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+                ...extra
+            };
+        }
+
+        // Yetki Kontrolü
+        if (localStorage.getItem('kullaniciRolu') !== 'cirak' || !localStorage.getItem('authToken')) {
+            oturumSonlandir("Yetkisiz Giriş! Sadece çıraklar girebilir.");
+        }
+        
+        function cikisYap() { 
+            oturumSonlandir();
+        }
+
+        // Backend'den Araçları ve Parçaları Çek
+        async function parcalariGetir() {
+            const alan = document.getElementById('aracKartlariAlani');
+            try {
+                const res = await fetch(`${API_BASE}/cirak/is-emirleri`, {
+                    headers: authHeaders()
+                });
+                if (res.status === 401 || res.status === 403) {
+                    oturumSonlandir("Oturum süreniz doldu, lütfen tekrar giriş yapın.");
+                    return;
+                }
+                if (!res.ok) throw new Error("Veri alınamadı");
+
+                const veriler = await res.json();
+                
+                alan.innerHTML = "";
+                
+                if (veriler.length === 0) {
+                    alan.innerHTML = `<div class="bilgi-mesaji">Şu an bekleyen hiçbir parça siparişi yok. ☕</div>`;
+                    return;
+                }
+
+                veriler.forEach(arac => {
+                    if (arac.durum === 'Arşivlendi') return;
+
+                    let kartHtml = `
+                        <div class="arac-karti">
+                            <div class="karti-baslik">
+                                <div class="plaka">${escapeHtml(arac.plaka)}</div>
+                                <div class="marka">${escapeHtml(arac.marka_model)}</div>
+                            </div>
+                            <ul class="parca-listesi">
+                    `;
+
+                    if (arac.alinacak_parcalar && arac.alinacak_parcalar.length > 0) {
+                        arac.alinacak_parcalar.forEach((parca, index) => {
+                            const durumClass = parca.alindi_mi ? 'alindi' : '';
+                            const parcaAdi = parca.alinacak_parca || parca.isim || "Bilinmeyen Parça";
+                            
+                            kartHtml += `
+                                <li class="parca-item ${durumClass}" id="parcaSatiri_${arac.id}_${index}">
+                                    <div class="parca-isim">
+                                        <span class="tik-isareti">✅</span> 
+                                        ${escapeHtml(parcaAdi)}
+                                    </div>
+                                    <button class="btn-al" onclick="parcaAlindiIsaretle(${arac.id}, ${index})">Alındı Yap</button>
+                                </li>
+                            `;
+                        });
+                    } else {
+                        kartHtml += `<li style="color: #94a3b8; font-size: 0.9rem;">Bu araç için istenen ekstra bir parça yok.</li>`;
+                    }
+
+                    kartHtml += `</ul></div>`;
+                    alan.innerHTML += kartHtml;
+                });
+
+            } catch (e) {
+                alan.innerHTML = `<div class="bilgi-mesaji" style="color: #ef4444;">Sunucuya bağlanılamadı. İnterneti kontrol et.</div>`;
+            }
+        }
+
+        // Parçayı Alındı Olarak İşaretle
+        async function parcaAlindiIsaretle(isEmriId, parcaIndex) {
+            const satir = document.getElementById(`parcaSatiri_${isEmriId}_${parcaIndex}`);
+            satir.classList.add('alindi');
+
+            try {
+                const res = await fetch(`${API_BASE}/cirak/parca-guncelle`, {
+                    method: 'PUT',
+                    headers: authHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({ is_emri_id: isEmriId, parca_index: parcaIndex, durum: true })
+                });
+
+                if (res.status === 401 || res.status === 403) {
+                    satir.classList.remove('alindi');
+                    oturumSonlandir("Oturum süreniz doldu, lütfen tekrar giriş yapın.");
+                    return;
+                }
+                if (!res.ok) {
+                    throw new Error("Parça durumu güncellenemedi.");
+                }
+            } catch (err) {
+                satir.classList.remove('alindi');
+                alert("Hata: Parça durumu sunucuya işlenemedi.");
+            }
+        }
+
+        window.onload = parcalariGetir;
+    </script>
+</body>
+</html>
